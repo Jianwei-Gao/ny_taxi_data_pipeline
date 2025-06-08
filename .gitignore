@@ -1,0 +1,8 @@
+starter/.terraform*
+starter/terraform*
+google_cred/google-credentials.json
+airflow/dags/__pycache__
+airflow/logs/**
+airflow/config/airflow.cfg
+.vscode
+ny_taxi_postgres_data/**

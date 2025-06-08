@@ -1,0 +1,11 @@
+name: dataEng
+dependencies:
+  - python=3.12
+  - numpy
+  - pandas
+  - psycopg2
+  - sqlalchemy
+  - pyarrow
+  - pip
+  - pip:
+    - -r requirements.txt

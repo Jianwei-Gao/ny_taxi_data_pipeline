@@ -1,0 +1,1 @@
+my conda env setup for local testing and IntelliSense
