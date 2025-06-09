@@ -1,2 +1,4 @@
+# Folder mounted/copied into docker 
+
 contains google cloud json credential in google-credentials.json
-shoud be gitignored
+contains sensitive contents that shoud be gitignored
