@@ -1,0 +1,11 @@
+services:
+  dbt-bigquery:
+    build: 
+      context: ..
+      dockerfile: ./dbt/dockerfile
+      target: dbt-bigquery
+
+    env_file: './.env'
+    volumes:
+      - ./project:/usr/app/dbt
+      - ./.dbt/profiles.yml:/root/.dbt/profiles.yml

@@ -3,7 +3,8 @@ FROM apache/airflow:latest-python3.9
 ENV AIRFLOW_HOME=/opt/airflow
 
 USER airflow
-COPY requirements.txt .
+COPY ./airflow/requirements.txt .
+COPY ./google_cred /opt/airflow/google
 USER root
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
@@ -15,4 +16,3 @@ USER airflow
 RUN pip install --no-cache-dir apache-airflow==${AIRFLOW_VERSION} -r requirements.txt
 
 WORKDIR $AIRFLOW_HOME
-COPY ../google /opt/airflow/google
