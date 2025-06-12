@@ -2,6 +2,7 @@ ARG py_version=3.11.2
 
 FROM python:$py_version-slim-bullseye AS base
 
+USER root
 RUN apt-get update \
   && apt-get dist-upgrade -y \
   && apt-get install -y --no-install-recommends \
@@ -18,50 +19,46 @@ RUN apt-get update \
     /tmp/* \
     /var/tmp/*
 
+RUN mkdir /usr/app/ /usr/app/.dbt/
+WORKDIR /usr/app/
+RUN useradd -d /usr/app -u 1000 -g 0 dbt
+RUN chown -R :0 /usr/app/
+RUN chmod -R 770 /usr/app/
 ENV PYTHONIOENCODING=utf-8
 ENV LANG=C.UTF-8
 
 RUN python -m pip install --upgrade "pip==24.0" "setuptools==69.2.0" "wheel==0.43.0" --no-cache-dir
 
-CMD [ "bin/bash" ]
+CMD [ "/bin/bash" ]
 
 FROM base AS dbt-core
-
+USER root
 ARG commit_ref=main
 
 HEALTHCHECK CMD dbt --version || exit 1
 
-WORKDIR /usr/app/dbt
-
 RUN python -m pip install --no-cache-dir "dbt-core @ git+https://github.com/dbt-labs/dbt-core@${commit_ref}#subdirectory=core"
-
-CMD [ "bin/bash" ]
+USER dbt
 
 # dbt for local postgres 
 
-FROM base AS dbt-postgres
-
+FROM dbt-core AS dbt-postgres
+USER root
 ARG commit_ref=main
 
 HEALTHCHECK CMD dbt --version || exit 1
 
-WORKDIR /usr/app/dbt
-
 RUN python -m pip install --no-cache-dir "dbt-postgres @ git+https://github.com/dbt-labs/dbt-adapters@${commit_ref}#subdirectory=dbt-postgres"
-
-CMD [ "bin/bash" ]
+USER dbt
 
 # dbt for bigquery
 
-FROM base AS dbt-bigquery
-
+FROM dbt-core AS dbt-bigquery
+USER root
 ARG commit_ref=main
 
 HEALTHCHECK CMD dbt --version || exit 1
 
-WORKDIR /usr/app/dbt
-
 COPY ./google_cred/google-credentials.json /.google/credentials/google-credentials.json
 RUN python -m pip install --no-cache-dir "dbt-bigquery @ git+https://github.com/dbt-labs/dbt-adapters@${commit_ref}#subdirectory=dbt-bigquery"
-
-CMD [ "bin/bash" ]
+USER dbt

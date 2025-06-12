@@ -1,4 +1,4 @@
-dbt-bigquery-profile:
+ny_rides_data:
   target: dev 
   outputs:
     dev:

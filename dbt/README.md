@@ -8,5 +8,6 @@ or if not cd in dbt folder
 
 execute cml by
 - docker compose \<-f to path if needed\> run [options] dbt-bigquery [command] [args...]
-- for example: docker compose run dbt-bigquery dbt init
-
+- for example: 
+    1. docker compose run dbt-bigquery dbt init
+    2. docker compose run dbt-bigquery bash

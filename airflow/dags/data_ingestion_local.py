@@ -48,18 +48,3 @@ with local_workflow:
     bash_command=f'rm {output}'
   )
   curl_task >> ingest_task
-  
-# @DAG(dag_id="demo")
-# def demo_2():
-#   @task.bash
-#   def wget_2() -> str:
-#     return 'echo "hello world"'
-
-#   @task.bash
-#   def ingest_2() -> str:
-#     return 'echo "hello world"'
-  
-#   wget_2()
-#   ingest_2()
-# demo_2()
-
