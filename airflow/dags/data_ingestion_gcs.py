@@ -14,6 +14,7 @@ PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
 BUCKET = os.environ.get("GCP_GCS_BUCKET")
 BIGQUERY_DATASET = os.environ.get("BIGQUERY_DATASET","trips_data_all")
 AIRFLOW_HOME = os.environ.get("AIRFLOW_HOME", "/opt/airflow/")
+DATASET_PREFIX = os.environ.get("DATASET_NAME")
 
 def checkIfParquetExistsGCS(**kwargs) -> bool:
   hook = GCSHook()
@@ -29,20 +30,22 @@ with DAG(
   start_date=datetime(2021, 1, 1)
   ):
   
-  # checkFinalBQTableExists = ShortCircuitOperator(
-  #   task_id = "check_file_exists_local",
-  #   python_callable=checkIfBigQueryTableExists,
-  #   op_kwargs={'table_name':bq_final_table_name},
-  # )    
     for taxi_type in ["yellow", "green", "fhv"]:  
       url = f'https://d37ci6vzurychx.cloudfront.net/trip-data/{taxi_type}_tripdata_{{{{ logical_date.strftime(\'%Y-%m\') }}}}.parquet'
       parquet_name = f'{taxi_type}_{{{{ logical_date.strftime(\'%Y-%m\') }}}}.parquet'
       parquet_file = f'{AIRFLOW_HOME}/{parquet_name}'
-      bq_external_table_name = f"{taxi_type}_external_{{{{ logical_date.strftime(\'%Y_%m\') }}}}"
+      bq_external_table_name = f"{taxi_type}_external"
       bq_staging_table_name = f"{taxi_type}_staging_{{{{ logical_date.strftime(\'%Y_%m\') }}}}"
       bq_final_table_name = f"{taxi_type}_final_{{{{ logical_date.strftime(\'%Y\') }}}}"
-      DATASET_NAME = os.environ.get("DATASET_NAME") + taxi_type
-
+      DATASET_NAME = DATASET_PREFIX + taxi_type
+      
+      if taxi_type == "yellow":
+        date_time_col = "tpep_pickup_datetime"
+      elif taxi_type == "green":
+        date_time_col = "lpep_pickup_datetime"
+      else:
+        date_time_col = "pickup_datetime"
+        
       checkFileExistGCS = ShortCircuitOperator(
         task_id = f"check_file_exists_gcs_{taxi_type}",
         python_callable=checkIfParquetExistsGCS,
@@ -53,7 +56,7 @@ with DAG(
       
       curlTask = BashOperator(
         task_id = f"curl_parquet_{taxi_type}",
-        bash_command=f'curl -sSL {url} > {parquet_file}'
+        bash_command=f'curl -sSLf {url} > {parquet_file}'
       )
 
       uploadToGCS = LocalFilesystemToGCSOperator(
@@ -65,7 +68,8 @@ with DAG(
       
       rmTask = BashOperator(
         task_id = f"rm_parquet_{taxi_type}",
-        bash_command=f'rm {parquet_file}'
+        bash_command=f'rm {parquet_file}',
+        trigger_rule="always"
       )
 
       checkIfExternalTableExists = ShortCircuitOperator(
@@ -89,7 +93,7 @@ with DAG(
           },
           "type":"EXTERNAL",
           "externalDataConfiguration": {
-            "sourceUris" : [f"gs://{BUCKET}/raw/{parquet_name}"],
+            "sourceUris" : [f"gs://{BUCKET}/raw/{taxi_type}_*.parquet"],
             "sourceFormat" : "PARQUET"
           }
         },
@@ -161,4 +165,5 @@ with DAG(
       # checkIfExternalTableExists >> createExternalTableBigQuery >> checkIfStagingTableExists >> createStagingTable >> \
       # createFinalTable >> MergeIntoFinalTable
     
-      checkFileExistGCS >> curlTask >> uploadToGCS >> rmTask >> checkIfExternalTableExists >> createExternalTableBigQuery
+      checkFileExistGCS >> curlTask >> uploadToGCS >> rmTask 
+      uploadToGCS >> checkIfExternalTableExists >> createExternalTableBigQuery
